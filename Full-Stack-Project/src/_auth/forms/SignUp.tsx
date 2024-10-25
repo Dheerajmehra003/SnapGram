@@ -2,18 +2,23 @@ import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage,} from "@/components/ui/form"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage,} from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { signUpValidation } from "@/lib/Validation"
-import { Divide } from "lucide-react"
 import Loader from "@/components/shared/Loader"
 import { Link } from "react-router-dom"
-import { createUserAccount } from "@/lib/appwrite/api"
+import { useToast } from "@/hooks/use-toast"
+import { useCreateUserAccount, useSignInAccount } from "@/lib/React-query/queriesAndmutation"
+
 
 
 const SignUp = () => {
 
-  const isLoading = false;
+  const { toast } = useToast()
+
+  const {mutateAsync: createUserAccount, isLoading: isCreatingUser} = useCreateUserAccount();
+
+  const {mutateAsync: signInAccount, isLoading: isSigningIn} = useSignInAccount();
 
   const form = useForm<z.infer<typeof signUpValidation>>({
     resolver: zodResolver(signUpValidation),
@@ -26,8 +31,25 @@ const SignUp = () => {
   })
    async function onSubmit(values: z.infer<typeof signUpValidation>) {
     const newUser = await createUserAccount(values)
+  
+     if(!newUser){
+      return   toast({
+        title: "Sign up failed. Please try again.",
+      })
+     }
 
-    console.log(newUser)
+     const session = await signInAccount({
+      email: values.email,
+      password: values.password,
+
+     })
+
+     if(!session){
+      return toast({title: "Sign in failed. Please  try again."})
+     }
+
+     
+
   }
   return (
     <div>
@@ -90,7 +112,7 @@ const SignUp = () => {
               )}
             />
             <Button type="submit" className="shad-button_primary">
-              {isLoading ? (
+              {isCreatingUser ? (
                 <div className="flex-center gap-2">
                    <Loader />Loading...
                 </div>
